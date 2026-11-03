@@ -225,6 +225,15 @@ Select your STB when prompted. To run only the required payload without strippin
 
 ### Step 11: Verify ADB Connection
 
+If an expiry task reports `cwmp.9007` (`Invalid parameter Value`), restart the updated
+`tls/pass_front.py` before retrying that task. The Jio TR-069 client v4.2.3 validates
+dates with `yyyy-MM-dd'T'HH:mm:ssZ`, which rejects GenieACS's UTC `Z` suffix and
+milliseconds. The proxy sends whole-second `Device.JioSTB` date writes with the
+equivalent numeric offset, e.g. `2027-01-01T00:00:00+00:00`. Changing the task JSON
+alone does not work because GenieACS normalizes it again. Confirm completion and
+refresh the parameter from the device; a queued task or cached value is not proof
+that the expiry was applied.
+
 > [!NOTE]
 > **"Allow USB Debugging?" Dialog on TV:**
 > No prompt will appear on your TV until the STB boots and applies the CWMP task. Once connected, your TV screen will display an RSA key prompt.

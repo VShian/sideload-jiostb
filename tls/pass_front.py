@@ -140,6 +140,15 @@ def handle(conn, addr):
                         log(f"{cid} genie err: {e2}"); break
                 setck=sess_cookie(r.getheader("set-cookie"))
             respdec=dec(rbody, r.getheader("content-encoding"))
+            if b":SetParameterValues>" in respdec:
+                # Jio's yyyy-MM-dd'T'HH:mm:ssZ parser needs a numeric UTC offset, without milliseconds.
+                fixed = re.sub(
+                    rb'(<Name>Device\.JioSTB\.[^<]+</Name>\s*<Value\s+xsi:type="xsd:dateTime">)'
+                    rb'(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:\.000)?Z(</Value>)',
+                    rb'\g<1>\g<2>+00:00\g<3>', respdec)
+                if fixed != respdec:
+                    respdec = fixed
+                    rbody = gzip.compress(fixed) if "gzip" in (r.getheader("content-encoding") or "").lower() else fixed
             hdrs="; ".join(f"{k}:{v}" for k,v in r.getheaders())
             log(f"{cid} <<< {r.status} {r.reason} len={len(rbody)} setcookie={setck or '-'} hdrs=[{hdrs}]")
             if respdec: log(f"{cid} <<< body: {respdec[:1600].decode('latin1','replace')}")
@@ -153,6 +162,7 @@ def handle(conn, addr):
             out=[f"HTTP/1.1 {r.status} {r.reason}"]
             for k,v in r.getheaders():
                 if k.lower()=="transfer-encoding": continue
+                if k.lower()=="content-length": v=str(len(rbody))
                 out.append(f"{k}: {v}")
             if not any(o.lower().startswith("content-length") for o in out):
                 out.append(f"Content-Length: {len(rbody)}")
